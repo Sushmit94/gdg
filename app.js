@@ -51,18 +51,36 @@ app.post('/login', (req, res) => {
                     const token = jwt.sign({ email: user.email, id: user._id }, secretKey);
                     res.cookie("token", token, {
                         httpOnly: true,
-                        secure: false, // true if using HTTPS
+                        secure: false, // set to true if using HTTPS
                     });
-                    res.send("You can login");
-                } else {
-                    res.send("Password is wrong");
+                
+                    // 🔥 Fix: Pass full user with payments to dashboard
+                    res.render("dashboard", { user: user });
                 }
+                
             });
         })
         .catch(err => {
             res.send("Something went wrong: " + err.message);
         });
 });
+
+app.get('/dashboard', isLoggedIn, async (req, res) => {
+    const user = await userModel.findOne({ email: req.user.email });
+    res.render("dashboard", { user });
+});
+
+
+
+app.post('/payment', isLoggedIn, async (req, res) => {
+    let user = await userModel.findOne({ email: req.user.email });
+    const {amount ,description,date} = req.body;
+   
+    user.payments.push({amount,description,date});
+    user.save();
+    res.redirect("/dashboard");
+})
+
 
 app.get('/logout', (req, res) => {
     res.cookie("token", "", { maxAge: 0 }); // Clear the cookie effectively
